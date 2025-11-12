@@ -12,7 +12,7 @@ from HdRezkaApi import HdRezkaApi
 from HdRezkaApi.types import TVSeries, Movie
 from multiselect import MultiSelect
 from singleselect import SingleSelect
-from helper import choose_preferred_quality
+from helper import choose_preferred_quality, get_session_file, save_session, load_session
 
 
 def _sanitize_filename(name: str) -> str:
@@ -197,11 +197,10 @@ def main():
             print('Could not obtain session cookies after login. Stored session not created.')
             sys.exit(3)
 
-        # Persist session next to this script (program folder)
-        sess_file = Path(__file__).resolve().parent / '.rezka_session.json'
+        # Persist session into user's folder `~/rezka-downloader-cli`
         try:
-            sess_file.write_text(json.dumps({'cookies': cookies}, ensure_ascii=False))
-            print(f'Session saved to {sess_file}')
+            path = save_session(cookies)
+            print(f'Session saved to {path}')
             sys.exit(0)
         except Exception as e:
             print(f'Failed to save session: {e}')
@@ -215,15 +214,9 @@ def main():
     # separate from the `login` command so the main flow remains unchanged.
     rezka = None
     try:
-        sess_file = Path(__file__).resolve().parent / '.rezka_session.json'
-        if sess_file.exists():
-            try:
-                _data = json.loads(sess_file.read_text())
-                cookies = _data.get('cookies') if isinstance(_data, dict) else None
-            except Exception:
-                cookies = None
-            if cookies:
-                rezka = HdRezkaApi(url, cookies=cookies)
+        cookies = load_session()
+        if cookies:
+            rezka = HdRezkaApi(url, cookies=cookies)
     except Exception:
         rezka = None
 

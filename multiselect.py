@@ -208,13 +208,21 @@ class MultiSelect:
 
             key = stdscr.getch()
             if key in (curses.KEY_UP, ord('k')):
-                current -= 1
-                if current < 0:
+                if rows:
+                    current -= 1
+                    if current < 0:
+                        # wrap to last
+                        current = len(rows) - 1
+                else:
                     current = 0
             elif key in (curses.KEY_DOWN, ord('j')):
-                current += 1
-                if current >= len(rows):
-                    current = len(rows) - 1
+                if rows:
+                    current += 1
+                    if current >= len(rows):
+                        # wrap to first
+                        current = 0
+                else:
+                    current = 0
             elif key in (ord('a'), ord('A')):
                 # Toggle all items in the list (select all / clear all).
                 # Only meaningful in multiple-selection mode. In single-select

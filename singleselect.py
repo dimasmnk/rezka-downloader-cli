@@ -98,11 +98,13 @@ class SingleSelect:
             if key in (curses.KEY_UP, ord('k')):
                 current -= 1
                 if current < 0:
-                    current = 0
+                    # wrap to last
+                    current = len(self.items) - 1
             elif key in (curses.KEY_DOWN, ord('j')):
                 current += 1
                 if current >= len(self.items):
-                    current = len(self.items) - 1
+                    # wrap to first
+                    current = 0
             elif key in (curses.KEY_ENTER, 10, 13):
                 return self.items[current]
             elif key in (27, ord('q')):
