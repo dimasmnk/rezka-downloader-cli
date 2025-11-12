@@ -116,6 +116,6 @@ This project is licensed under the MIT License — see the `LICENSE` file for de
 
 ## Acknowledgements
 
-Special thanks to @SuperZombie for providing a convenient API used by this project.
+Special thanks to SuperZombi for providing a convenient API used by this project.
 
 GitHub: https://github.com/SuperZombi/HdRezkaApi
