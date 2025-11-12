@@ -1,0 +1,64 @@
+name: PyInstaller build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+      fail-fast: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip (non-Windows)
+        if: matrix.os != 'windows-latest'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/src/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f src/requirements.txt ]; then pip install -r src/requirements.txt; fi
+          pip install pyinstaller
+
+      - name: Build with PyInstaller (Linux/macOS)
+        if: matrix.os != 'windows-latest'
+        shell: bash
+        run: |
+          rm -rf build dist __pycache__
+          pyinstaller --onefile src/rezka.py
+
+      - name: Build with PyInstaller (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          Remove-Item -Recurse -Force build, dist, __pycache__ -ErrorAction SilentlyContinue
+          pyinstaller --onefile src/rezka.py
+
+      - name: List dist contents
+        run: |
+          echo "dist contents:"
+          ls -la dist || true
+
+      - name: Upload built executable
+        uses: actions/upload-artifact@v3
+        with:
+          name: rezka-${{ matrix.os }}
+          path: dist/*
