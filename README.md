@@ -60,16 +60,16 @@ rezka <URL>
 
 ## Examples
 
-Download a film page:
+Download a movie:
 
 ```zsh
-rezka https://rezka.ag/films/fiction/981-matrica-1999-latest.html
+rezka https://rezka.ag/films/genre/movie-page.html
 ```
 
-Download a series page (download behavior depends on implementation — check --help for episode selection flags):
+Download a series:
 
 ```zsh
-rezka https://rezka.ag/series/your-series-page
+rezka https://rezka.ag/series/genre/series-page.html
 ```
 
 ## Configuration & Login
