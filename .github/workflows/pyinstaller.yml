@@ -58,7 +58,7 @@ jobs:
           ls -la dist || true
 
       - name: Upload built executable
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: rezka-${{ matrix.os }}
           path: dist/*
