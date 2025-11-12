@@ -58,12 +58,6 @@ Basic usage:
 rezka <URL>
 ```
 
-To see available options and flags:
-
-```zsh
-rezka --help
-```
-
 ## Examples
 
 Download a film page:
