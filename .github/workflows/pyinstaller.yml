@@ -1,10 +1,12 @@
 name: PyInstaller build
 
+permissions:
+  contents: write
+
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    # Trigger only on tag pushes (e.g. git tag v1.2.3 && git push --tags)
+    tags: ['*']
   workflow_dispatch:
 
 jobs:
@@ -32,11 +34,21 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Install dependencies
+      - name: Install dependencies (Linux/macOS)
+        if: matrix.os != 'windows-latest'
+        shell: bash
         run: |
           python -m pip install --upgrade pip
-          if [ -f src/requirements.txt ]; then pip install -r src/requirements.txt; fi
-          pip install pyinstaller
+          if [ -f src/requirements.txt ]; then python -m pip install -r src/requirements.txt; fi
+          python -m pip install pyinstaller
+
+      - name: Install dependencies (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          if (Test-Path -Path 'src/requirements.txt') { python -m pip install -r 'src/requirements.txt' }
+          python -m pip install pyinstaller
 
       - name: Build with PyInstaller (Linux/macOS)
         if: matrix.os != 'windows-latest'
@@ -52,13 +64,64 @@ jobs:
           Remove-Item -Recurse -Force build, dist, __pycache__ -ErrorAction SilentlyContinue
           pyinstaller --onefile src/rezka.py
 
-      - name: List dist contents
+      - name: List dist contents (Linux/macOS)
+        if: matrix.os != 'windows-latest'
+        shell: bash
         run: |
           echo "dist contents:"
           ls -la dist || true
+
+      - name: List dist contents (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          Write-Host "dist contents:"
+          if (Test-Path -Path 'dist') { Get-ChildItem -Path 'dist' -Recurse -Force } else { Write-Host "dist not found" }
 
       - name: Upload built executable
         uses: actions/upload-artifact@v4
         with:
           name: rezka-${{ matrix.os }}
           path: dist/*
+
+  # Create a GitHub Release and attach the built artifacts to the release
+  # This job runs after all matrix build jobs complete and uploads the binaries
+  # to the release for the pushed tag.
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: rezka-ubuntu-latest
+          path: release-assets/linux
+        continue-on-error: true
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: rezka-windows-latest
+          path: release-assets/windows
+        continue-on-error: true
+
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: rezka-macos-latest
+          path: release-assets/macos
+        continue-on-error: true
+
+      - name: List release assets
+        run: |
+          echo "release-assets contents:"
+          ls -la release-assets || true
+
+      - name: Create GitHub release and upload assets
+        # Creates the release for the pushed tag and uploads all files under release-assets
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            release-assets/**
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
