@@ -1,25 +1,13 @@
-# Rezka Downloader CLI
+# 🍿 Rezka Downloader CLI
 
 A small command-line tool to download films and series from Rezka (rezka.ag). It supports optional login for premium access and can download single items or whole series pages.
 
-## Table of Contents
-- [Features](#features)
-- [Requirements](#requirements)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Examples](#examples)
-- [Configuration & Login](#configuration--login)
-- [Troubleshooting](#troubleshooting)
-- [Contributing](#contributing)
-- [License](#license)
-- [Acknowledgements](#acknowledgements)
-
-## Features
+## ⚙️ Features
 - Download films and series pages from rezka.ag
 - Optional login for premium content (higher quality)
 - Simple single-command usage
 
-## Requirements
+## 🧩 Requirements
 - Python 3.8+ if you plan to run from source
 - (Optional) prebuilt binary for your OS (see Releases)
 
@@ -31,7 +19,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Installation
+## 🛠️ Installation
 
 Recommended: download a prebuilt binary from the Releases page.
 
@@ -50,7 +38,7 @@ sudo mv /path/to/rezka /usr/local/bin/
 
 Or run from source using `python rezka.py` after installing requirements (see above).
 
-## Usage
+## 🚀 Usage
 
 Basic usage:
 
@@ -58,7 +46,7 @@ Basic usage:
 rezka <URL>
 ```
 
-## Examples
+## 🔍 Examples
 
 Download a movie:
 
@@ -72,7 +60,7 @@ Download a series:
 rezka https://rezka.ag/series/genre/series-page.html
 ```
 
-## Configuration & Login
+## 🔑 Configuration & Login
 
 Logging in is optional but recommended for access to premium/higher-quality streams.
 
@@ -84,7 +72,7 @@ rezka login
 
 This command should prompt for credentials or run an interactive flow. Login is persistent — you only need to do it once. (If you'd like, I can extract and document exactly where credentials/cookies are stored by inspecting the code.)
 
-## Troubleshooting
+## ⚠️ Troubleshooting
 
 - Permission denied when running the binary: ensure it is executable (`chmod +x`) and on your PATH.
 - Login failures: verify credentials, network connectivity, and whether the site changed its authentication flow. Try logging in via a browser and inspect cookies if necessary.
@@ -92,15 +80,15 @@ This command should prompt for credentials or run an interactive flow. Login is 
 
 If you hit an error, please open an issue with the command you ran and a short copy of the error output.
 
-## Contributing
+## 🤝 Contributing
 
 Contributions are welcome. Please open an issue for discussion before submitting a non-trivial change. Small fixes (typos, docs) can be sent as PRs directly.
 
-## License
+## 📜 License
 
 This project is licensed under the MIT License — see the `LICENSE` file for details.
 
-## Acknowledgements
+## 🙏 Acknowledgements
 
 Special thanks to SuperZombi for providing a convenient API used by this project.
 
