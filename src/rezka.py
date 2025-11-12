@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 
 import requests
+import os
+import signal
 
 from pypdl import Pypdl
 from HdRezkaApi import HdRezkaApi
@@ -244,6 +246,84 @@ def main():
     # internal event loop shutting down after the first download
     dl = Pypdl(allow_reuse=True, logger=disabled_logger)
 
+    # Track temporary files for in-progress downloads so we can clean them
+    # up if the process is cancelled part-way through.
+    current_temp_files = set()
+
+    # Cleanup helper used by signal handlers and finalizers. Keeps logic in
+    # one place so behavior is consistent for KeyboardInterrupt and signals.
+    def _cleanup_and_exit(signame: Optional[str] = None):
+        try:
+            dl.shutdown()
+        except Exception:
+            pass
+
+        # First, try to remove any temp files we explicitly tracked. pypdl
+        # may create multiple segment files named like '<name>.mp4.part.0',
+        # '<name>.mp4.part.1' etc. Remove the exact tmp name and any files
+        # matching the pattern tmp + '*'.
+        for tmp in list(current_temp_files):
+            try:
+                p = Path(tmp)
+                # remove the exact file if present
+                if p.exists():
+                    p.unlink()
+                    print(f"Removed partial file: {tmp}")
+                # remove any segment/temp files that start with this name
+                for f in p.parent.glob(p.name + '*'):
+                    try:
+                        if f.exists():
+                            f.unlink()
+                            print(f"Removed partial file: {f}")
+                    except Exception:
+                        print(f"Failed to remove partial file: {f}")
+            except Exception:
+                print(f"Failed to remove partial file: {tmp}")
+
+        # As a fallback, remove any leftover files matching the common
+        # pattern used by pypdl for partial mp4 downloads in the current
+        # directory. This helps when temp files exist but weren't tracked
+        # due to an unexpected interruption.
+        try:
+            cwd = Path('.')
+            for f in cwd.glob('*.mp4.part*'):
+                try:
+                    f.unlink()
+                    print(f"Removed partial file: {f}")
+                except Exception:
+                    print(f"Failed to remove partial file: {f}")
+        except Exception:
+            # don't fail cleanup if globbing fails for any reason
+            pass
+
+        if signame:
+            print(f"Exiting due to signal: {signame}")
+        # Exit with non-zero to indicate interruption
+        try:
+            sys.exit(1)
+        except SystemExit:
+            # ensure exit even if sys.exit is intercepted
+            os._exit(1)
+
+    def _signal_handler(signum, frame):
+        try:
+            name = signal.Signals(signum).name
+        except Exception:
+            name = str(signum)
+        _cleanup_and_exit(name)
+
+    # Register common termination signals so we can remove partial files
+    # if the user sends SIGINT/SIGTERM (Ctrl-C or kill). Ignore failures
+    # if signals can't be registered in this environment.
+    try:
+        signal.signal(signal.SIGINT, _signal_handler)
+    except Exception:
+        pass
+    try:
+        signal.signal(signal.SIGTERM, _signal_handler)
+    except Exception:
+        pass
+
     # Utility to download a single stream
     def download_stream(stream, out_name: str):
         quality = choose_preferred_quality(stream.videos.keys())
@@ -277,11 +357,48 @@ def main():
                     best_link = l
             link = best_link if best_link is not None else links[0]
         fname = _sanitize_filename(out_name) + '.mp4'
+        tmp_name = fname + '.part'
         print(f"Downloading {out_name} -> {fname} ({quality})")
         try:
-            dl.start(link, file_path=fname, segments=32, retries=8)
+            # Register the final filename so the cleanup logic can find any
+            # partial files that pypdl may create (e.g. '<name>.mp4.part.*').
+            current_temp_files.add(fname)
+
+            # Download into a temporary file first, then move into place on
+            # success. This avoids leaving many half-finished .mp4 files in
+            # the working directory when the user interrupts the process.
+            dl.start(link, file_path=tmp_name, segments=32, retries=8)
+
+            # If download completed successfully, atomically rename into
+            # the final filename.
+            try:
+                Path(tmp_name).replace(Path(fname))
+            except Exception:
+                # Fallback: try simple rename
+                try:
+                    os.replace(tmp_name, fname)
+                except Exception:
+                    # If rename fails, leave the temp file but report it.
+                    print(f"Warning: failed to rename {tmp_name} to {fname}")
+        except KeyboardInterrupt:
+            # Propagate keyboard interrupt after ensuring cleanup in outer
+            # finally block (which will remove any known temp files).
+            raise
         except Exception as e:
             print(f"Download failed for {out_name}: {e}")
+            # On any failure, try to remove any partial files matching the
+            # pattern we expect pypdl to create for this download.
+            try:
+                for f in Path('.').glob(f"{fname}.part*"):
+                    try:
+                        f.unlink()
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+        finally:
+            # No longer consider this filename active
+            current_temp_files.discard(fname)
 
     try:
         # 4. If series: get seasons and episodes for selected translator
@@ -325,6 +442,18 @@ def main():
             dl.shutdown()
         except Exception:
             pass
+
+        # Remove any leftover temporary files created for interrupted
+        # downloads. We only remove files we created and tracked above to
+        # avoid deleting unrelated files in the directory.
+        for tmp in list(current_temp_files):
+            try:
+                p = Path(tmp)
+                if p.exists():
+                    p.unlink()
+                    print(f"Removed partial file: {tmp}")
+            except Exception:
+                print(f"Failed to remove partial file: {tmp}")
 
 
 if __name__ == "__main__":
