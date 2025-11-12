@@ -1,13 +1,5 @@
 # Rezka Downloader CLI
 
-## Install
-
-1. Download binaries from Releases
-2. Put executable where you want
-3. Add path to Pathes
-
-# Rezka Downloader CLI
-
 A small command-line tool to download films and series from Rezka (rezka.ag). It supports optional login for premium access and can download single items or whole series pages.
 
 ## Table of Contents
